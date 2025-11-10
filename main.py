@@ -1,5 +1,7 @@
 import time
-from src import cvlibrary, cwjobs, jobserve, reed, indeed
+from src import (
+    cvlibrary, cwjobs, jobserve, reed, indeed, linkedin
+)
 
 
 def run_all():
@@ -11,7 +13,8 @@ def run_all():
         ("CWJobs", cwjobs.CWJobsScraper),
         ("JobServe", jobserve.JobServeScraper),
         ("Reed", reed.ReedScraper),
-        ("Indeed", indeed.IndeedScraper)
+        ("Indeed", indeed.IndeedScraper),
+        ("Linkedin", linkedin.LinkedInScraper)
     ]
 
     total_inserted = 0
