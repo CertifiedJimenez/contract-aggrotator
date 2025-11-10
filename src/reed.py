@@ -1,6 +1,8 @@
 from .base import BaseClient
 from bs4 import BeautifulSoup
 from datetime import datetime
+import time
+
 
 class ReedScraper(BaseClient):
     BASE_TEMPLATE = "https://www.reed.co.uk/jobs/{query}-jobs-in-{location}?pageno={page}"
@@ -22,6 +24,18 @@ class ReedScraper(BaseClient):
             pages.append(html_text)
         return pages
 
+    def fetch_detail(self, url):
+        """Fetch full job description from a Reed job page."""
+        try:
+            result = self._request("request.get", url, maxTimeout=60000)
+            html_text = result.get("solution", {}).get("response", "") if isinstance(result, dict) else result
+            soup = BeautifulSoup(html_text, "html.parser")
+            desc_el = soup.select_one('[data-qa="job-description"]')
+            return desc_el.get_text(" ", strip=True) if desc_el else ""
+        except Exception as e:
+            print(f"[!] Failed to fetch detail for {url}: {e}")
+            return ""
+
     def parse(self, html_text):
         soup = BeautifulSoup(html_text, "html.parser")
         jobs = []
@@ -30,13 +44,21 @@ class ReedScraper(BaseClient):
             company_el = card.select_one("div.job-card_jobResultHeading__postedBy__sK_25 a")
             desc_el = card.select_one("button.job-card_btnToggleJobDescription__C8fds")
             url = f"https://www.reed.co.uk{title_el['href']}" if title_el and title_el.get("href") else ""
+
+            short_desc = desc_el.get_text(strip=True) if desc_el else ""
+            full_desc = self.fetch_detail(url) if url else ""
+
             jobs.append({
                 "company": company_el.get_text(strip=True) if company_el else "",
                 "title": title_el.get_text(strip=True) if title_el else "",
-                "description": desc_el.get_text(strip=True) if desc_el else "",
+                "description": full_desc or short_desc,
                 "url": url,
                 "posted": "",
             })
+
+            # brief delay to be kind to the server
+            time.sleep(0.5)
+
         return jobs
 
     def run(self):
